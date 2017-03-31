@@ -1,6 +1,7 @@
 from pyspark import SparkConf
 from pyspark import SparkContext
 from pyspark.sql import SQLContext
+from pyspark.sql.types import Row
 from operator import add
 import argparse
 
@@ -68,15 +69,19 @@ error_counts = textFile.flatMap(lambda x:[x]) \
 	               .sortBy(lambda x: x[1],ascending=False) \
                        .collect()
 
-unique_users = textFileCombined.flatMap(lambda x:[x]) \
-               		       .filter(lambda line:"systemd: Starting Session " in line) \
-               		       .map(lambda line:(str(line.split("user")[-1].strip()[:-1]),get_system_name(line))) \
-			       .reduceByKey(lambda a:a)  \
-               		       .distinct() \
-			       .collect()
+#unique_users = textFileCombined.flatMap(lambda x:[x]) \
+#               		       .filter(lambda line:"systemd: Starting Session " in line) \
+#               		       .map(lambda line:(str(line.split("user")[-1].strip()[:-1]),get_system_name(line))) \
+#				       .filter(lambda line:"None" not in line) \
+#			       .reduceByKey(lambda a:a+a)  \
+#               		       .distinct() \
+#			       .collect()
+
+df = textFileCombined.map(lambda r: Row(r.split("user")[-1].strip()[:-1],get_system_name(r))).toDF(["line"])
+print df.select("line").dropDuplicates().show()
 
 print users
 print session
 print errors
 print error_counts[0:5]
-print unique_users
+#print unique_users
