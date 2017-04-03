@@ -2,6 +2,7 @@ from pyspark import SparkConf
 from pyspark import SparkContext
 from pyspark.sql import SQLContext
 from pyspark.sql.types import Row
+pyspark.sql.DataFrame 
 from operator import add
 import argparse
 
@@ -77,11 +78,12 @@ error_counts = textFile.flatMap(lambda x:[x]) \
 #               		       .distinct() \
 #			       .collect()
 
-df = textFileCombined.map(lambda r: Row(r.split("user")[-1].strip()[:-1],get_system_name(r))).toDF(["line"])
-print df.select("line").dropDuplicates().show()
+df = textFile.map(lambda r: Row(r)).toDF(["line"])
+df_errors = df.filter(col("line").like("%ERROR%"))
+df_errors.show()
 
 print users
 print session
 print errors
 print error_counts[0:5]
-#print unique_users
+print unique_users
