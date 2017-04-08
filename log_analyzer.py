@@ -40,11 +40,11 @@ counts = textFile.flatMap(lambda x:[x]) \
 
 print counts
 
-#users = textFile.flatMap(lambda x:[x]) \
-#                .filter(lambda line:"systemd: Starting Session " in line ) \
-#                .map(lambda line: str(line.split("user")[-1].strip()[:-1])) \
-#     		.distinct()  \
-#		.collect()
+users = textFile.flatMap(lambda x:[x]) \
+                .filter(lambda line:"systemd: Starting Session " in line ) \
+                .map(lambda line: str(line.split("user")[-1].strip()[:-1])) \
+     		.distinct()  \
+		.collect()
 
 #session = textFile.flatMap(lambda x:[x]) \
 #                  .filter(lambda line:"systemd: Starting Session " in line ) \
