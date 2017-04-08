@@ -33,12 +33,12 @@ def get_system_name(line):
   print words
   return words[3]
 
-#counts = textFile.flatMap(lambda x:[x]) \
-		 #.filter(lambda x:filter_user_achilles(x)) \
-                 #.map(lambda x: (1, 1)) \
-                 #.reduceByKey(lambda x, y: x + y).collect()
+counts = textFile.flatMap(lambda x:[x]) \
+		 .filter(lambda x:filter_user_achilles(x)) \
+                 .map(lambda x: (1, 1)) \
+                 .reduceByKey(lambda x, y: x + y).collect()
 
-#print counts
+print counts
 
 #users = textFile.flatMap(lambda x:[x]) \
 #                .filter(lambda line:"systemd: Starting Session " in line ) \
