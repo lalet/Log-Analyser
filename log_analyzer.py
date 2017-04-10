@@ -46,11 +46,11 @@ users = textFile.flatMap(lambda x:[x]) \
      		.distinct()  \
 		.collect()
 
-#session = textFile.flatMap(lambda x:[x]) \
-#                  .filter(lambda line:"systemd: Starting Session " in line ) \
-#                  .map(lambda line: (str(line.split("user")[-1].strip()[:-1]),1)) \
-#		  .reduceByKey(lambda x, y: x + y) \
-#                  .collect()
+session = textFile.flatMap(lambda x:[x]) \
+                  .filter(lambda line:"systemd: Starting Session " in line ) \
+                  .map(lambda line: (str(line.split("user")[-1].strip()[:-1]),1)) \
+		  .reduceByKey(lambda x, y: x + y) \
+                  .collect()
 
 #errors = textFile.flatMap(lambda x:[x]) \
 #                 .filter(lambda line:"error" in (line.lower()) ) \
