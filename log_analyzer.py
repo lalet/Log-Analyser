@@ -96,7 +96,7 @@ single_login = combined_rdd.reduceByKey(lambda x,y:x+","+y) \
 single_login=[x for x in single_login if None!=x]
 print single_login
 
-users = textFile.flatMap(lambda x:[x]) \
+users_sorted_list = textFile.flatMap(lambda x:[x]) \
                 .filter(lambda line:"systemd: Starting Session " in line ) \
                 .map(lambda line: str(line.split("user")[-1].strip()[:-1])) \
                 .distinct()  \
@@ -104,14 +104,26 @@ users = textFile.flatMap(lambda x:[x]) \
                 .collect()
 
 
-print users
+print users_sorted_list
+
+#anonymised_file = textFile.flatMap(lambda x:[x]) \
+#                         .map(lambda line: line.replace(str(line.split("user")[-1].strip()[:-1]),"user-"+str(users_sorted_list.index(str(line.split("user")[-1].strip()[:-1]))))) \
+#			  .distinct() \
+#			  .sortBy(lambda x: x[0]) \
+#			  .collect()
+			  #.filter(lambda line:"systemd: Starting Session " in line ) \
+
+def anonymize_user_names(line):
+  if [user for user in users_sorted_list if user in line]:
+    return line.replace(user,"user-"+str(users_sorted_list.index(user)))
+  else :
+    return line
 
 anonymised_file = textFile.flatMap(lambda x:[x]) \
-                          .filter(lambda line:"systemd: Starting Session " in line ) \
-                          .map(lambda line: line.replace(str(line.split("user")[-1].strip()[:-1]),"user-"+str(users.index(str(line.split("user")[-1].strip()[:-1]))))) \
-			  .distinct() \
-			  .sortBy(lambda x: x[0]) \
-			  .collect()
+			  .map(lambda line: anonymize_user_names(line)) \
+                          .distinct() \
+                          .sortBy(lambda x: x[0]) \
+                          .collect()
 
 print anonymised_file
 			  
