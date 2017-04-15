@@ -106,26 +106,19 @@ users_sorted_list = textFile.flatMap(lambda x:[x]) \
 
 print users_sorted_list
 
-#anonymised_file = textFile.flatMap(lambda x:[x]) \
-#                         .map(lambda line: line.replace(str(line.split("user")[-1].strip()[:-1]),"user-"+str(users_sorted_list.index(str(line.split("user")[-1].strip()[:-1]))))) \
-#			  .distinct() \
-#			  .sortBy(lambda x: x[0]) \
-#			  .collect()
-			  #.filter(lambda line:"systemd: Starting Session " in line ) \
-
 def anonymize_user_names(line):
-  if [user for user in users_sorted_list if user in line]:
-    return line.replace(user,"user-"+str(users_sorted_list.index(user)))
-  else :
-    return line
+  for user in users_sorted_list:
+    if user in line:
+      line = line.replace(user,"user-"+str(users_sorted_list.index(user)))
+      return line
+  return line
 
 anonymised_file = textFile.flatMap(lambda x:[x]) \
 			  .map(lambda line: anonymize_user_names(line)) \
-                          .distinct() \
-                          .sortBy(lambda x: x[0]) \
-                          .collect()
+			  .map(lambda line:anonymize_user_names(line) if "su:" in line else line) \
+                          .saveAsTextFile("anonymised")
 
-print anonymised_file
+print "saved anonymised_file"
 			  
 
 #print session
