@@ -11,7 +11,7 @@ import os
 import shutil
 
 def filter_user_achilles(line):
-  if "starting Session" in line.lower() and "user achille" in line.lower():
+  if "starting session" in line.lower() and "user achille" in line.lower():
     return line
 
 def filter_find_user(line):
@@ -20,18 +20,13 @@ def filter_find_user(line):
     print lines[1]
     return lines[1]
 
-def get_system_name(line):
-  words = line.strip().split(" ")
-  print words
-  return words[3]
-
-def counts(file):
-  counts = file.flatMap(lambda x:[x]) \
+def counts(file_text):
+  counts = file_text.flatMap(lambda x:[x]) \
 		 .filter(lambda x:filter_user_achilles(x)) \
                  .map(lambda x: (1, 1)) \
                  .reduceByKey(lambda x, y: x + y).collect()
-
-  return counts[0][1]
+  if counts:
+    return counts[0][1]
 
 def users(file):
   users = file.flatMap(lambda x:[x]) \
@@ -247,8 +242,8 @@ def main():
 	print "User-Mapping:"
 	for user in users_sorted_list:
 	  print user,"-"," user-",users_sorted_list.index(user)
-	if os.path.exists("anonymised-files-"+get_file_name(file1)):
-          shutil.rmtree("anonymised-files-"+get_file_name(file1))
+	if os.path.exists("anonymised-files-"+get_file_name(file2)):
+          shutil.rmtree("anonymised-files-"+get_file_name(file2))
         anonymize_file(textFileTwo,get_file_name(file2),users_sorted_list)
 
 if __name__=='__main__':
