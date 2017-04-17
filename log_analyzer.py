@@ -174,13 +174,11 @@ def main():
 	file2=args.file2
         textFileTwo= sc.textFile(file2)
     if question_number == "1":
-      file_name=file1
-      file2_name=file2
       print "Number of lines:"
       if file1 is not None:
-        print get_file_name(file_name)+": ",textFile.count()
+        print get_file_name(file1)+": ",textFile.count()
       if file2 is not None:
-        print get_file_name(file2_name)+": ",textFileTwo.count()
+        print get_file_name(file2)+": ",textFileTwo.count()
 
     if question_number == "2":
       print "Number of sessions of user 'achille'"
