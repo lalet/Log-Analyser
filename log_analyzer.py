@@ -121,9 +121,9 @@ anonymised_file = textFile.flatMap(lambda x:[x]) \
 print "saved anonymised_file"
 			  
 
-#print session
-#print errors
-#print error_counts[0:5]
+print session
+print errors
+print error_counts[0:5]
 #print unique_users
 #print unique_users_iliad
 #print unique_users.union(unique_users_iliad)
