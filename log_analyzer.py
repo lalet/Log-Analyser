@@ -10,16 +10,18 @@ import sys
 import os
 import shutil
 
+#Filter function for fomd the number of times achilles loggedin
 def filter_user_achilles(line):
   if "starting session" in line.lower() and "user achille" in line.lower():
     return line
 
+#Function to filter the user
 def filter_find_user(line):
   if  "systemd: Starting Session " in line:
     lines=line.split("user")
-    print lines[1]
     return lines[1]
 
+#Function to find the number of logins of user achilles
 def counts(file_text):
   counts = file_text.flatMap(lambda x:[x]) \
 		 .filter(lambda x:filter_user_achilles(x)) \
@@ -28,35 +30,37 @@ def counts(file_text):
   if counts:
     return counts[0][1]
 
-def users(file):
-  users = file.flatMap(lambda x:[x]) \
-                  .filter(lambda line:"systemd: Starting Session " in line ) \
+def users(file_content):
+  users = file_content.flatMap(lambda x:[x]) \
+                  .filter(lambda line:"systemd: starting session " in line.lower() ) \
                   .map(lambda line: str(line.split("user")[-1].strip()[:-1])) \
      		  .distinct()  \
 		  .collect()
   return users
 
-def session(file):
-  session = file.flatMap(lambda x:[x]) \
-                    .filter(lambda line:"systemd: Starting Session " in line ) \
-                    .map(lambda line: (str(line.split("user")[-1].strip()[:-1]),1)) \
-		    .reduceByKey(lambda x, y: x + y) \
-                    .collect()
+#Funciton to find the number of session by each user
+def session(file_content):
+  session = file_content.flatMap(lambda x:[x]) \
+                        .filter(lambda line:"systemd: starting session " in line.lower() ) \
+                        .map(lambda line: (str(line.split("user")[-1].strip()[:-1]),1)) \
+		        .reduceByKey(lambda x, y: x + y) \
+                        .collect()
   return session
 
-def errors(file):
+#Function to find the total number of errors
+def errors(file_content):
   error=None
-  errors = file.flatMap(lambda x:[x]) \
-                   .filter(lambda line:"error" in (line.lower()) ) \
-                   .map(lambda line: (1,1)) \
-                   .reduceByKey(lambda x, y: x + y) \
-                   .collect()
+  errors = file_content.flatMap(lambda x:[x]) \
+                       .filter(lambda line:"error" in (line.lower()) ) \
+                       .map(lambda line: (1,1)) \
+                       .reduceByKey(lambda x, y: x + y) \
+                       .collect()
   if errors:
     error=errors[0][1]
   return error
 
+#Function to find the top 5 errors which occurs frequently
 def error_counts(file,file_name):
-  print file_name
   error_counts = file.flatMap(lambda x:[x]) \
                	     .filter(lambda line:"error" in (line.lower())) \
                      .map(lambda line: (line.split(file_name)[1] if len(line.split(file_name))>=2 else None,1)) \
@@ -66,6 +70,8 @@ def error_counts(file,file_name):
                      .collect()
   return error_counts
 
+
+#function which returns the combined files from two different log files
 def get_combined_rdd(file1,file_name,file2,file2_name):
   unique_users = file2.flatMap(lambda x:[x]) \
                		    .filter(lambda line:"systemd: starting session " in line.lower()) \
@@ -83,6 +89,7 @@ def get_combined_rdd(file1,file_name,file2,file2_name):
 
   return unique_users.union(unique_users_iliad)
 
+#Function to fin users who logged in from multiple systems
 def get_multiple_host_users(combined_rdd):  
   multiple_hosts = combined_rdd.reduceByKey(lambda x,y:x+","+y) \
 			   .map(lambda x:x[0] if len(x[1].split(",")) > 1 else None)  \
@@ -91,6 +98,7 @@ def get_multiple_host_users(combined_rdd):
 
   return multiple_hosts
 
+#Function to find the users which logged in only from one system
 def get_single_host_users(combined_rdd):
   single_login = combined_rdd.reduceByKey(lambda x,y:x+","+y) \
                              .map(lambda x:x if len(x[1].split(","))==1 else None)  \
@@ -99,6 +107,7 @@ def get_single_host_users(combined_rdd):
 
   return single_login
 
+#Function which finds all the users and sorts the users 
 def get_users_sorted_list(file_content):
   users_sorted_list = file_content.flatMap(lambda x:[x]) \
                           .filter(lambda line:"systemd: Starting Session " in line ) \
@@ -109,6 +118,8 @@ def get_users_sorted_list(file_content):
 
   return users_sorted_list
 
+
+#Function to anonymize the user names in log files and write as a separate file
 def anonymize_user_names(line,users_sorted_list):
   for user in users_sorted_list:
     if user in line:
@@ -131,6 +142,7 @@ def anonymize_file(file_content,file_name,users_sorted_list):
 #print unique_users_iliad
 #print unique_users.union(unique_users_iliad)ii
 
+#Function to get the file name from the path
 def get_file_name(path):
   if "/" in path:
     return str(path.split("/")[-1])
