@@ -167,6 +167,8 @@ def main():
     if len(sys.argv) < 2:
 	log_error("Script should have minimum two parameters. Usage: ./log_analyzer q <question number> -f1 <filepath> -f2<filepath>")
     question_number=args.q
+    file1=None
+    file2=None
     if args.file1:
 	file1=args.file1
 	textFile = sc.textFile(file1)
