@@ -7,6 +7,8 @@ from pyspark.sql.types import Row
 from operator import add
 import argparse
 import sys
+import os
+import shutil
 
 def filter_user_achilles(line):
   if "starting Session" in line.lower() and "user achille" in line.lower():
@@ -59,70 +61,72 @@ def errors(file):
   return error
 
 def error_counts(file,file_name):
-  error_counts = textFile.flatMap(lambda x:[x]) \
-               	         .filter(lambda line:"error" in (line.lower())) \
-                         .map(lambda line: (line.split(file_name)[1],1)) \
-                         .reduceByKey(lambda x, y: x + y) \
-	                 .sortBy(lambda x: x[1],ascending=False) \
-                         .collect()
+  print file_name
+  error_counts = file.flatMap(lambda x:[x]) \
+               	     .filter(lambda line:"error" in (line.lower())) \
+                     .map(lambda line: (line.split(file_name)[1] if len(line.split(file_name))>=2 else None,1)) \
+		     .filter(lambda line:line is not None) \
+                     .reduceByKey(lambda x, y: x + y) \
+	             .sortBy(lambda x: x[1],ascending=False) \
+                     .collect()
   return error_counts
 
-def unique_users(file1,file2):
-  unique_users = textFileTwo.flatMap(lambda x:[x]) \
-               		    .filter(lambda line:"systemd: Starting Session " in line) \
-               		    .map(lambda line:(str(line.split("user")[-1].strip()[:-1]),"odyssey")) \
-			    .filter(lambda line:"None" not in line) \
+def get_combined_rdd(file1,file_name,file2,file2_name):
+  unique_users = file2.flatMap(lambda x:[x]) \
+               		    .filter(lambda line:"systemd: starting session " in line.lower()) \
+               		    .map(lambda line:(str(line.split("user")[-1].strip()[:-1]),file2_name)) \
+			    .filter(lambda line:line is not None) \
                		    .distinct() 
 			      # .collect()
 
-  unique_users_iliad = textFile.flatMap(lambda x:[x]) \
+  unique_users_iliad = file1.flatMap(lambda x:[x]) \
                                .filter(lambda line:"systemd: Starting Session " in line) \
-                               .map(lambda line:(str(line.split("user")[-1].strip()[:-1]),"iliad")) \
-                               .filter(lambda line:"None" not in line) \
+                               .map(lambda line:(str(line.split("user")[-1].strip()[:-1]),file_name)) \
+                               .filter(lambda line:line is not None) \
                                .distinct() 
                               # .collect()
 
-  combined_rdd = unique_users.union(unique_users_iliad)
+  return unique_users.union(unique_users_iliad)
 
+def get_multiple_host_users(combined_rdd):  
   multiple_hosts = combined_rdd.reduceByKey(lambda x,y:x+","+y) \
 			   .map(lambda x:x[0] if len(x[1].split(",")) > 1 else None)  \
+			   .filter(lambda line:line is not None) \
 			   .collect()
 
-  multiple_hosts=[x for x in multiple_hosts if None!=x]
-  print multiple_hosts
+  return multiple_hosts
 
-def single_login(file1,file2):
+def get_single_host_users(combined_rdd):
   single_login = combined_rdd.reduceByKey(lambda x,y:x+","+y) \
                              .map(lambda x:x if len(x[1].split(","))==1 else None)  \
+			     .filter(lambda line:line is not None) \
                              .collect()
 
-  single_login=[x for x in single_login if None!=x]
-  print single_login
+  return single_login
 
-def users_sorted_list(file1,file2):
-  users_sorted_list = textFile.flatMap(lambda x:[x]) \
-                              .filter(lambda line:"systemd: Starting Session " in line ) \
-                              .map(lambda line: str(line.split("user")[-1].strip()[:-1])) \
-                              .distinct()  \
-		              .sortBy(lambda x:x) \
-                              .collect()
+def get_users_sorted_list(file_content):
+  users_sorted_list = file_content.flatMap(lambda x:[x]) \
+                          .filter(lambda line:"systemd: Starting Session " in line ) \
+                          .map(lambda line: str(line.split("user")[-1].strip()[:-1])) \
+                          .distinct()  \
+		          .sortBy(lambda x:x) \
+                          .collect()
 
+  return users_sorted_list
 
-  print users_sorted_list
-
-def anonymize_user_names(line):
+def anonymize_user_names(line,users_sorted_list):
   for user in users_sorted_list:
     if user in line:
       line = line.replace(user,"user-"+str(users_sorted_list.index(user)))
       return line
   return line
 
-  anonymised_file = textFile.flatMap(lambda x:[x]) \
-			  .map(lambda line: anonymize_user_names(line)) \
-			  .map(lambda line:anonymize_user_names(line) if "su:" in line else line) \
-                          .saveAsTextFile("anonymised")
-
-#print "saved anonymised_file"
+def anonymize_file(file_content,file_name,users_sorted_list):
+  anonymised_file = file_content.flatMap(lambda x:[x]) \
+		                .map(lambda line: anonymize_user_names(line,users_sorted_list)) \
+			        .map(lambda line:anonymize_user_names(line,users_sorted_list) if "su:" in line else line) \
+  				.saveAsTextFile("anonymised-files-"+file_name) 
+  print "saved anonymised_file","anonymised-files-"+file_name
 			  
 
 #print session
@@ -199,6 +203,53 @@ def main():
       if file2 is not None:
         print get_file_name(file2)+": ",errors(textFileTwo)
 
+    if question_number == "6":
+      print "5 most frequent errors"
+      if file1 is not None:
+	error_list=error_counts(textFile,get_file_name(file1))
+        print get_file_name(file1)+": \n"
+	for error in error_list[0:5]:
+	  print "- ",error[1],error[0]
+      if file2 is not None:
+	#error_counts(textFileTwo,get_file_name(file2))
+	error_list=error_counts(textFileTwo,get_file_name(file2))
+        print get_file_name(file2)+": \n"
+	for error in error_list[0:5]:
+          print "- ",error[1],error[0]
+    
+    if question_number == "7":
+      print "Users who started a session on exactly two hosts:"
+      if file1 is not None and file2 is not None:
+	combined_rdd=get_combined_rdd(textFile,get_file_name(file1),textFileTwo,get_file_name(file2))
+        print get_multiple_host_users(combined_rdd)
+      else:
+	log_error("This needs exactly two files for finding the users who logged in from multiple systems")  
+ 
+    if question_number == "8":
+      print "Users who started a session on exactly one host:"
+      if file1 is not None and file2 is not None:
+        combined_rdd=get_combined_rdd(textFile,get_file_name(file1),textFileTwo,get_file_name(file2))
+        print get_single_host_users(combined_rdd)
+      else:
+        log_error("This needs exactly two files for finding the users who logged in from a single system")
+
+    if question_number == "9":
+      print "Anonymise files"
+      if file1 is not None:
+	users_sorted_list=get_users_sorted_list(textFile)
+	for user in users_sorted_list:
+          print user,"-"," user-",users_sorted_list.index(user)
+	if os.path.exists("anonymised-files-"+get_file_name(file1)):
+	  shutil.rmtree("anonymised-files-"+get_file_name(file1))
+        anonymize_file(textFile,get_file_name(file1),users_sorted_list)
+      if file2 is not None:
+        users_sorted_list=get_users_sorted_list(textFileTwo)
+	print "User-Mapping:"
+	for user in users_sorted_list:
+	  print user,"-"," user-",users_sorted_list.index(user)
+	if os.path.exists("anonymised-files-"+get_file_name(file1)):
+          shutil.rmtree("anonymised-files-"+get_file_name(file1))
+        anonymize_file(textFileTwo,get_file_name(file2),users_sorted_list)
 
 if __name__=='__main__':
 	main()
