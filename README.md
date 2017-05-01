@@ -9,4 +9,6 @@ Syntax to run the program
 
  > python log_analyzer.py -q [number] -f1 [dir1] -f2 [dir2]
 
+Directories contain log files.
+
 A Jupyter Notebook containing the results and logic is also added.
